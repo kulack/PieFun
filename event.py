@@ -6,7 +6,7 @@ print("Starting with board revision %s" % GPIO.RPI_REVISION)
 # Use raspberry pi board pin numbers
 GPIO.setmode(GPIO.BOARD)
 
-# These are the available buttons and the pins they are on
+# These are the available buttons and the GPIO pins they are on
 one=35
 two=37
 three=22
@@ -15,36 +15,64 @@ five=36
 six=38
 seven=18
 
+# These are the GPIO pins for the fire control relays
+fire1=33
+fire2=31
+fire3=29
+fire4=32
+
+# On the input of any of these buttons
 inputs = [ one, two, three, four, five, six, seven ]
-outputs = { one   : 'fire # 1',
-            two   : 'fire # 2',
-            three : 'fire # 3',
-            four  : 'fire # 4',
-            five  : 'fire # 1 and 4',
-            six   : 'fire # 2 and 3',
-            seven : 'fire ALL' }
+outputs = [ fire1, fire2, fire3, fire4 ]
+
+# These are the actions we're going to take
+actions = { one   : [ fire1 ],
+            two   : [ fire2 ],
+            three : [ fire3 ],
+            four  : [ fire4 ],
+            five  : [ fire1, fire4 ],
+            six   : [ fire2, fire3 ],
+            seven : [ fire1, fire2, fire3, fire4 ] }
 
 
-def trigger1(channel):
-    print("Button pressed pin=%s  %s" % (str(channel), outputs[channel]))
+def trigger(channel):
+    fires = actions[channel]
+    print("Button pressed pin=%s  %s" % (str(channel), fires))
+    try:
+        for pin in fires
+            GPIO.output(pin, GPIO.HIGH)
+        time.sleep(0.4)
+    except:
+        print("Failed firing pin=%s  %s" % (str(channel), fires))
+    finally:
+        for pin in fires
+            GPIO.output(pin, GPIO.LOW)
+
 
 try:
     # Set up GPIO channels as input or output
     for pin in inputs:
         print("Turning on input triggers for pin %d" % pin)
         GPIO.setup(pin, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-        GPIO.add_event_detect(pin, GPIO.RISING, callback=trigger1, bouncetime=200)
+        GPIO.add_event_detect(pin, GPIO.RISING, callback=trigger, bouncetime=200)
 
-    #for pin in outputs:
-    #    GPIO.setup(xx, GPIO.OUT)
+    for pin in outputs:
+        GPIO.setup(pin, GPIO.OUT)
 
     while True:
         time.sleep(1)
-        print("Waiting...")
 
     # GPIO.output(xx, GPIO.HIGH)
 except KeyboardInterrupt:
     print("Ending")
 finally:
+    # Attempt to turn off everything
+    try:
+        for pin in inputs:
+            GPIO.remove_event_detect(pin)
+        for pin in outputs:
+            GPIO.output(pin, GPIO.LOW)
+    except:
+        print("Couldn't do reset of output GPIO pins")
     GPIO.cleanup()
 
