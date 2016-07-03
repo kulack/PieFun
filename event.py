@@ -35,36 +35,41 @@ actions = { one   : [ fire1 ],
             seven : [ fire1, fire2, fire3, fire4 ] }
 
 
+# This runs in a secondary thread
 def trigger(channel):
     fires = actions[channel]
-    print("Button pressed pin=%s  %s" % (str(channel), fires))
+    print("Fire pin=%s  %s" % (str(channel), fires))
     try:
-        for pin in fires
+        for pin in fires:
             GPIO.output(pin, GPIO.HIGH)
+        # We will eventually do something better here so that
+        # we can hold the button down and continue to fire the output
         time.sleep(0.4)
     except:
         print("Failed firing pin=%s  %s" % (str(channel), fires))
     finally:
-        for pin in fires
+        print("Off pin=%s  %s" % (str(channel), fires))
+        for pin in fires:
             GPIO.output(pin, GPIO.LOW)
 
 
 try:
     # Set up GPIO channels as input or output
-    for pin in inputs:
-        print("Turning on input triggers for pin %d" % pin)
-        GPIO.setup(pin, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-        GPIO.add_event_detect(pin, GPIO.RISING, callback=trigger, bouncetime=200)
-
     for pin in outputs:
+        print("Activating output for pin %d" % pin)
         GPIO.setup(pin, GPIO.OUT)
+
+    for pin in inputs:
+        print("Activating input triggers for pin %d" % pin)
+        GPIO.setup(pin, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
+        GPIO.add_event_detect(pin, GPIO.RISING, callback=trigger, bouncetime=300)
 
     while True:
         time.sleep(1)
 
-    # GPIO.output(xx, GPIO.HIGH)
 except KeyboardInterrupt:
-    print("Ending")
+    print("\nEnding")
+
 finally:
     # Attempt to turn off everything
     try:
